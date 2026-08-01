@@ -1,63 +1,68 @@
 #!/bin/bash
 
-echo "=== SIERRA INSTALL ==="
+echo "================================"
+echo " SIERRA INSTALL CHECK "
+echo "================================"
+date
 
-TARGET="/Volumes/Macintosh HD"
 ESD="/Volumes/OS X Install ESD"
-
-if [ ! -d "$ESD" ]; then
-    echo "FAIL: OS X Install ESD missing"
-    exit 1
-fi
-
-if [ ! -d "$TARGET" ]; then
-    echo "FAIL: Macintosh HD not mounted"
-    exit 1
-fi
+TARGET="/Volumes/Macintosh HD"
 
 echo
-echo "Installer:"
-echo "$ESD"
+echo "=== Volumes ==="
+ls /Volumes
 
 echo
-echo "Target:"
-diskutil info "$TARGET" | grep -E "Device Identifier|File System|Disk Size"
+echo "=== Checking installer ==="
+
+for x in \
+"$ESD/BaseSystem.dmg" \
+"$ESD/Packages" \
+"$ESD/Packages/OSInstall.mpkg" \
+"$ESD/Packages/Essentials.pkg"
+do
+    if [ -e "$x" ]; then
+        echo "FOUND: $x"
+    else
+        echo "MISSING: $x"
+    fi
+done
 
 echo
-echo "================================="
+echo "=== Target disk ==="
+
+diskutil info "$TARGET" | grep -E \
+"Device Identifier|File System|Disk Size|OS Can Be Installed"
+
+echo
+echo "================================"
 echo "WARNING"
-echo "This will ERASE Macintosh HD"
-echo "================================="
+echo "ERASE Macintosh HD"
+echo "================================"
 
-printf "Type INSTALL-SIERRA to continue: "
+printf "Type YES ERASE SIERRA: "
 read CONFIRM
 
-if [ "$CONFIRM" != "INSTALL-SIERRA" ]; then
-    echo "Cancelled."
+if [ "$CONFIRM" != "YES ERASE SIERRA" ]; then
+    echo "Cancelled"
     exit 0
 fi
 
 echo
-echo "Unmounting target..."
+echo "=== Formatting Macintosh HD ==="
 
-diskutil unmount "$TARGET"
+diskutil eraseVolume \
+JHFS+ \
+"Macintosh HD" \
+/dev/disk0s2
 
-echo
-echo "Starting Sierra installer..."
-
-installer \
--pkg "$ESD/Packages/OSInstall.mpkg" \
--target "/Volumes/Macintosh HD"
 
 echo
-echo "Installer finished with code: $?"
+echo "=== Looking for Installer.app ==="
+
+find "/Volumes/OS X Base System 1" \
+-name "*.app" 2>/dev/null
+
 
 echo
-echo "Blessing boot volume..."
-
-bless \
---folder "/Volumes/Macintosh HD/System/Library/CoreServices" \
---bootefi
-
-echo
-echo "Done."
+echo "=== Finished discovery ==="
