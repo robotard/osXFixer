@@ -1,95 +1,82 @@
 #!/bin/bash
 
-echo "=== SIERRA INSTALL AUTOMATION ==="
+echo "=== SIERRA INSTALL ==="
 date
 
 ESD="/Volumes/OS X Install ESD"
 TARGET="/Volumes/Macintosh HD"
 
-echo
-echo "=== CHECKING VOLUMES ==="
-
-for V in "$ESD" "$TARGET"
-do
-    if [ -d "$V" ]; then
-        echo "OK $V"
-    else
-        echo "MISSING $V"
-        exit 1
-    fi
-done
-
-echo
-echo "=== CHECKING PAYLOAD ==="
-
-ESS="$ESD/Packages/Essentials.pkg"
-OSMP="$ESD/Packages/OSInstall.mpkg"
-
-if [ -f "$ESS" ]; then
-    echo "OK Essentials.pkg"
-else
-    echo "Missing Essentials.pkg"
+if [ ! -d "$ESD" ]; then
+    echo "ERROR: OS X Install ESD not mounted"
+    exit 1
 fi
 
-if [ -f "$OSMP" ]; then
-    echo "OK OSInstall.mpkg"
-else
-    echo "Missing OSInstall.mpkg"
+if [ ! -d "$TARGET" ]; then
+    echo "ERROR: Macintosh HD not mounted"
+    exit 1
 fi
+
+BASE="$ESD/BaseSystem.dmg"
+
+if [ ! -f "$BASE" ]; then
+    echo "ERROR: BaseSystem.dmg missing"
+    exit 1
+fi
+
+echo
+echo "=== VERIFY ==="
+
+ls -lh "$BASE"
+ls -lh "$ESD/Packages/Essentials.pkg"
+
+echo
+echo "=== Mounting BaseSystem ==="
+
+hdiutil attach "$BASE" -nobrowse
+
+sleep 3
+
+SOURCE=$(ls /Volumes | grep "OS X Base System" | tail -1)
+
+if [ -z "$SOURCE" ]; then
+    echo "ERROR: BaseSystem did not mount"
+    exit 1
+fi
+
+echo "Using:"
+echo "/Volumes/$SOURCE"
 
 
 echo
-echo "=== TARGET ==="
+echo "=== Copying Packages link ==="
 
-diskutil info "$TARGET" | grep -E \
-"Device Identifier|File System|OS Can Be Installed"
+rm -rf "/Volumes/$SOURCE/System/Installation/Packages"
 
-
-echo
-echo "=== SEARCHING INSTALLER COMPONENTS ==="
-
-OSINSTALL=$(find "$ESD" -name "OSInstall.mpkg" 2>/dev/null | head -1)
-
-if [ -n "$OSINSTALL" ]; then
-    echo "Found:"
-    echo "$OSINSTALL"
-fi
-
-
-INSTALLER=$(find "$ESD" "$TARGET" \
--name "Installer" \
--type f \
-2>/dev/null | head -1)
-
-
-if [ -n "$INSTALLER" ]; then
-    echo
-    echo "Launching installer:"
-    echo "$INSTALLER"
-    "$INSTALLER"
-    exit $?
-fi
+ln -s "$ESD/Packages" \
+"/Volumes/$SOURCE/System/Installation/Packages"
 
 
 echo
-echo "=== USING OSINSTALL ENGINE ==="
+echo "=== Blessing installer ==="
 
-if [ -f "$OSINSTALL" ]; then
-
-    echo "Attempting OSInstall..."
-
-    /usr/sbin/installer \
-    -pkg "$OSINSTALL" \
-    -target "$TARGET"
-
-    exit $?
-
-fi
+bless \
+--folder "/Volumes/$SOURCE/System/Library/CoreServices" \
+--bootefi
 
 
 echo
-echo "FAILED:"
-echo "Installer engine not found."
-echo "Payload exists but installer workflow is missing."
+echo "=== Setting startup ==="
 
-exit 1
+bless \
+--folder "/Volumes/$SOURCE/System/Library/CoreServices" \
+--setBoot
+
+
+echo
+echo "=== Rebooting into installer ==="
+
+echo "Press Ctrl+C within 10 seconds to cancel"
+
+sleep 10
+
+reboot
