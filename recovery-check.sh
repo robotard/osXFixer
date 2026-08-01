@@ -11,7 +11,7 @@ set -e
 
 LOG="/tmp/osx-recovery-check-$(date +%Y%m%d-%H%M%S).log"
 
-exec > >(tee -a "$LOG") 2>&1
+exec > "$LOG") 2>&1
 
 echo "=== OS X Recovery Check ==="
 date
