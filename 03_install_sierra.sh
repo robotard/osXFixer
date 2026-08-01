@@ -2,14 +2,18 @@
 
 echo "=== SIERRA INSTALL ==="
 
-TARGET="Macintosh HD"
+TARGET="/Volumes/Macintosh HD"
 ESD="/Volumes/OS X Install ESD"
 
 if [ ! -d "$ESD" ]; then
-    echo "Installer media missing"
+    echo "FAIL: OS X Install ESD missing"
     exit 1
 fi
 
+if [ ! -d "$TARGET" ]; then
+    echo "FAIL: Macintosh HD not mounted"
+    exit 1
+fi
 
 echo
 echo "Installer:"
@@ -19,29 +23,41 @@ echo
 echo "Target:"
 diskutil info "$TARGET" | grep -E "Device Identifier|File System|Disk Size"
 
-
 echo
 echo "================================="
-echo "THIS WILL ERASE:"
-echo "$TARGET"
+echo "WARNING"
+echo "This will ERASE Macintosh HD"
 echo "================================="
 
 printf "Type INSTALL-SIERRA to continue: "
 read CONFIRM
-
 
 if [ "$CONFIRM" != "INSTALL-SIERRA" ]; then
     echo "Cancelled."
     exit 0
 fi
 
+echo
+echo "Unmounting target..."
+
+diskutil unmount "$TARGET"
 
 echo
-echo "Confirmed."
+echo "Starting Sierra installer..."
+
+installer \
+-pkg "$ESD/Packages/OSInstall.mpkg" \
+-target "/Volumes/Macintosh HD"
 
 echo
-echo "At this stage:"
-echo "Installer deployment command goes here."
-echo "Stopped intentionally until disk identifier is confirmed."
+echo "Installer finished with code: $?"
 
-diskutil list
+echo
+echo "Blessing boot volume..."
+
+bless \
+--folder "/Volumes/Macintosh HD/System/Library/CoreServices" \
+--bootefi
+
+echo
+echo "Done."
