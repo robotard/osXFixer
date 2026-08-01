@@ -1,75 +1,54 @@
 #!/bin/bash
 #
-# iMac12,2 Recovery Diagnostic / Prep Script
-# Intended for macOS Internet Recovery Terminal
-#
-# Does NOT erase disks automatically.
-# Does NOT install anything automatically.
+# iMac Recovery diagnostic
 #
 
-set -e
+LOG="/tmp/recovery-check.log"
 
-LOG="/tmp/osx-recovery-check-$(date +%Y%m%d-%H%M%S).log"
+echo "=== OS X Recovery Check ===" > "$LOG"
+date >> "$LOG"
 
-exec > "$LOG" 2>&1
+echo "" >> "$LOG"
+echo "=== System Version ===" >> "$LOG"
+sw_vers >> "$LOG" 2>&1
 
-echo "=== OS X Recovery Check ==="
-date
+echo "" >> "$LOG"
+echo "=== Hardware ===" >> "$LOG"
+ioreg -l | grep -E '"model"|board-id' >> "$LOG" 2>&1
 
-echo
-echo "=== System ==="
-sw_vers || true
-uname -a
+echo "" >> "$LOG"
+echo "=== Disks ===" >> "$LOG"
+diskutil list >> "$LOG" 2>&1
 
-echo
-echo "=== Hardware ==="
-ioreg -l | grep -E '"model"|board-id' || true
+echo "" >> "$LOG"
+echo "=== Volumes ===" >> "$LOG"
+ls /Volumes >> "$LOG" 2>&1
 
-echo
-echo "=== Disk Layout ==="
-diskutil list
+echo "" >> "$LOG"
+echo "=== Curl ===" >> "$LOG"
+curl --version >> "$LOG" 2>&1
 
-echo
-echo "=== Mounted Volumes ==="
-mount
+echo "" >> "$LOG"
+echo "=== Apple Reachability ===" >> "$LOG"
+ping -c 3 osrecovery.apple.com >> "$LOG" 2>&1
 
-echo
-echo "=== Network ==="
-ping -c 3 apple.com || true
-ping -c 3 osrecovery.apple.com || true
-ping -c 3 swscan.apple.com || true
+echo "" >> "$LOG"
+echo "=== Installer Tools ===" >> "$LOG"
 
-echo
-echo "=== Curl ==="
-curl --version
-
-echo
-echo "=== Apple HTTPS Tests ==="
-curl -Iv --http1.1 https://osrecovery.apple.com || true
-curl -Iv --http1.1 https://swscan.apple.com || true
-
-echo
-echo "=== Installer Tools ==="
-for tool in \
-/usr/sbin/diskutil \
+for x in \
 /usr/bin/hdiutil \
 /usr/sbin/asr \
 /usr/sbin/bless \
-/usr/sbin/installer
+/usr/sbin/installer \
+/usr/sbin/diskutil
 do
-    if [ -x "$tool" ]; then
-        echo "FOUND $tool"
+    if [ -e "$x" ]; then
+        echo "FOUND $x" >> "$LOG"
     else
-        echo "MISSING $tool"
+        echo "MISSING $x" >> "$LOG"
     fi
 done
 
-echo
-echo "=== Recovery Logs ==="
-grep -i "recovery server\|product fetch\|osinstall" /var/log/install.log 2>/dev/null || true
-
-echo
-echo "Log saved:"
+echo ""
+echo "Finished. Log:"
 echo "$LOG"
-
-echo "=== COMPLETE ==="
