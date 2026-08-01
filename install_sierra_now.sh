@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "======================================"
-echo "      SIERRA INSTALL NOW"
+echo "       SIERRA INSTALL NOW"
 echo "======================================"
 
 BASE="/Volumes/OS X Base System 1"
@@ -11,45 +11,26 @@ TARGET="/Volumes/Macintosh HD"
 echo
 echo "Checking volumes..."
 
-if [ ! -d "$BASE" ]; then
-    echo "ERROR: Missing $BASE"
-    exit 1
-fi
-
-if [ ! -d "$ESD" ]; then
-    echo "ERROR: Missing $ESD"
-    exit 1
-fi
-
-if [ ! -d "$TARGET" ]; then
-    echo "ERROR: Missing $TARGET"
-    exit 1
-fi
-
-echo "OK: Base System"
-echo "OK: Install ESD"
-echo "OK: Macintosh HD"
+[ -d "$BASE" ] && echo "OK Base System" || { echo "Missing Base System"; exit 1; }
+[ -d "$ESD" ] && echo "OK Install ESD" || { echo "Missing Install ESD"; exit 1; }
+[ -d "$TARGET" ] && echo "OK Macintosh HD" || { echo "Missing Macintosh HD"; exit 1; }
 
 echo
 echo "Checking payload..."
 
-if [ -f "$ESD/Packages/Essentials.pkg" ]; then
-    echo "OK: Essentials.pkg"
-else
-    echo "ERROR: Essentials.pkg missing"
-    exit 1
-fi
+[ -f "$ESD/Packages/Essentials.pkg" ] && echo "OK Essentials.pkg" || exit 1
+[ -f "$ESD/Packages/OSInstall.mpkg" ] && echo "OK OSInstall.mpkg" || exit 1
 
 echo
-echo "Finding Installer..."
+echo "Finding installer..."
 
-INSTALLER=$(find "$BASE/System/Installation" -type f -name "Installer" 2>/dev/null | head -1)
+INSTALLER=$(find "$BASE" -type f -name "Installer" 2>/dev/null | head -1)
 
 if [ -z "$INSTALLER" ]; then
-    echo "Installer binary not found."
+    echo "No Installer binary found."
     echo
-    echo "Contents of System/Installation:"
-    ls -la "$BASE/System/Installation"
+    echo "Trying CDIS:"
+    ls -la "$BASE/System/Installation/CDIS" 2>/dev/null
     exit 1
 fi
 
@@ -58,12 +39,9 @@ echo "Found:"
 echo "$INSTALLER"
 
 echo
-echo "Launching Sierra installer..."
+echo "Launching..."
 
 "$INSTALLER"
 
-EXIT=$?
-
 echo
-echo "Installer exited:"
-echo "$EXIT"
+echo "Finished with code $?"
