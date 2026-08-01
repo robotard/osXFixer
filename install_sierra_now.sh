@@ -1,52 +1,23 @@
 #!/bin/bash
 
-echo "=== Sierra Install Now ==="
-date
+echo "=== Sierra Installer Locate ==="
 
 BASE="/Volumes/OS X Base System 1"
 ESD="/Volumes/OS X Install ESD"
-TARGET="/Volumes/Macintosh HD"
 
 echo
-echo "Checking..."
+echo "Searching for installer bundles..."
 
-if [ ! -d "$BASE" ]; then
-    echo "ERROR: Missing $BASE"
-    exit 1
-fi
-
-if [ ! -d "$ESD" ]; then
-    echo "ERROR: Missing $ESD"
-    exit 1
-fi
-
-if [ ! -d "$TARGET" ]; then
-    echo "ERROR: Missing $TARGET"
-    exit 1
-fi
-
-echo "OK: Base System"
-echo "OK: Install ESD"
-echo "OK: Target"
+find "$BASE" \
+\( -name "*.app" -o -name "*Installer*" -o -name "*Install*" \) \
+2>/dev/null | grep -E "Install|Installer"
 
 echo
-echo "Looking for installer..."
+echo "Searching ESD..."
 
-INSTALLER=$(find "$BASE" -type f -name "Installer" 2>/dev/null | head -1)
-
-if [ -z "$INSTALLER" ]; then
-    echo "Installer not found."
-    echo "Searching CDIS:"
-    find "$BASE/System/Installation" -maxdepth 3 -print 2>/dev/null
-    exit 1
-fi
+find "$ESD" \
+\( -name "*.app" -o -name "*Installer*" -o -name "*Install*" \) \
+2>/dev/null | grep -E "Install|Installer"
 
 echo
-echo "Launching:"
-echo "$INSTALLER"
-
-"$INSTALLER"
-
-echo
-echo "Exit code:"
-echo $?
+echo "Done"
