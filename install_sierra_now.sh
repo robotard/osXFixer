@@ -1,37 +1,95 @@
 #!/bin/bash
 
-echo "=== Sierra Installer Reality Check ==="
+echo "=== SIERRA INSTALL AUTOMATION ==="
 date
 
-for V in "/Volumes/OS X Install ESD" "/Volumes/OS X Base System 1"
+ESD="/Volumes/OS X Install ESD"
+TARGET="/Volumes/Macintosh HD"
+
+echo
+echo "=== CHECKING VOLUMES ==="
+
+for V in "$ESD" "$TARGET"
 do
-    echo
-    echo "=== $V ==="
-
-    if [ ! -d "$V" ]; then
-        echo "NOT MOUNTED"
-        continue
+    if [ -d "$V" ]; then
+        echo "OK $V"
+    else
+        echo "MISSING $V"
+        exit 1
     fi
-
-    echo "Mounted OK"
-
-    echo
-    echo "Installer-looking files:"
-    find "$V" \
-    \( -iname "*install*" -o -iname "*installer*" -o -iname "*osinstall*" \) \
-    2>/dev/null
-
-    echo
-    echo "Large packages:"
-    find "$V/Packages" -type f 2>/dev/null | grep -E "Essentials|OSInstall|BaseSystem"
-
 done
 
 echo
-echo "=== Target ==="
+echo "=== CHECKING PAYLOAD ==="
 
-diskutil info "/Volumes/Macintosh HD" | grep -E \
-"Device Identifier|File System|OS Can Be Installed"
+ESS="$ESD/Packages/Essentials.pkg"
+OSMP="$ESD/Packages/OSInstall.mpkg"
+
+if [ -f "$ESS" ]; then
+    echo "OK Essentials.pkg"
+else
+    echo "Missing Essentials.pkg"
+fi
+
+if [ -f "$OSMP" ]; then
+    echo "OK OSInstall.mpkg"
+else
+    echo "Missing OSInstall.mpkg"
+fi
+
 
 echo
-echo "=== Finished ==="
+echo "=== TARGET ==="
+
+diskutil info "$TARGET" | grep -E \
+"Device Identifier|File System|OS Can Be Installed"
+
+
+echo
+echo "=== SEARCHING INSTALLER COMPONENTS ==="
+
+OSINSTALL=$(find "$ESD" -name "OSInstall.mpkg" 2>/dev/null | head -1)
+
+if [ -n "$OSINSTALL" ]; then
+    echo "Found:"
+    echo "$OSINSTALL"
+fi
+
+
+INSTALLER=$(find "$ESD" "$TARGET" \
+-name "Installer" \
+-type f \
+2>/dev/null | head -1)
+
+
+if [ -n "$INSTALLER" ]; then
+    echo
+    echo "Launching installer:"
+    echo "$INSTALLER"
+    "$INSTALLER"
+    exit $?
+fi
+
+
+echo
+echo "=== USING OSINSTALL ENGINE ==="
+
+if [ -f "$OSINSTALL" ]; then
+
+    echo "Attempting OSInstall..."
+
+    /usr/sbin/installer \
+    -pkg "$OSINSTALL" \
+    -target "$TARGET"
+
+    exit $?
+
+fi
+
+
+echo
+echo "FAILED:"
+echo "Installer engine not found."
+echo "Payload exists but installer workflow is missing."
+
+exit 1
