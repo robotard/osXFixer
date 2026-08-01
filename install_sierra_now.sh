@@ -1,77 +1,69 @@
 #!/bin/bash
 
 echo "======================================"
-echo "      macOS Sierra Install Launcher   "
+echo "      SIERRA INSTALL NOW"
 echo "======================================"
 
+BASE="/Volumes/OS X Base System 1"
 ESD="/Volumes/OS X Install ESD"
 TARGET="/Volumes/Macintosh HD"
-BASE="/Volumes/OS X Base System 1"
 
 echo
-echo "Checking..."
+echo "Checking volumes..."
+
+if [ ! -d "$BASE" ]; then
+    echo "ERROR: Missing $BASE"
+    exit 1
+fi
 
 if [ ! -d "$ESD" ]; then
-    echo "ERROR: OS X Install ESD missing"
+    echo "ERROR: Missing $ESD"
     exit 1
 fi
 
 if [ ! -d "$TARGET" ]; then
-    echo "ERROR: Macintosh HD missing"
+    echo "ERROR: Missing $TARGET"
     exit 1
 fi
 
-echo "OK: Installer media"
-echo "OK: Target disk"
+echo "OK: Base System"
+echo "OK: Install ESD"
+echo "OK: Macintosh HD"
 
 echo
-echo "Target:"
-diskutil info "$TARGET" | grep -E "Device Identifier|File System|OS Can Be Installed"
+echo "Checking payload..."
+
+if [ -f "$ESD/Packages/Essentials.pkg" ]; then
+    echo "OK: Essentials.pkg"
+else
+    echo "ERROR: Essentials.pkg missing"
+    exit 1
+fi
 
 echo
-echo "Finding installer..."
+echo "Finding Installer..."
 
-INSTALLER=$(find "$BASE" \
--name "Install*.app" \
--o -name "*Installer*.app" \
-2>/dev/null | head -1)
+INSTALLER=$(find "$BASE/System/Installation" -type f -name "Installer" 2>/dev/null | head -1)
 
-if [ -n "$INSTALLER" ]; then
-    echo "Found:"
-    echo "$INSTALLER"
-
+if [ -z "$INSTALLER" ]; then
+    echo "Installer binary not found."
     echo
-    echo "Launching installer..."
-    
-    open "$INSTALLER"
-
-    exit $?
+    echo "Contents of System/Installation:"
+    ls -la "$BASE/System/Installation"
+    exit 1
 fi
 
-
-echo "No installer app found."
+echo
+echo "Found:"
+echo "$INSTALLER"
 
 echo
-echo "Trying OSInstall engine..."
+echo "Launching Sierra installer..."
 
-if [ -x "$BASE/System/Installation/CDIS/Mac OS X Installer.app/Contents/MacOS/Installer" ]; then
+"$INSTALLER"
 
-    "$BASE/System/Installation/CDIS/Mac OS X Installer.app/Contents/MacOS/Installer"
-
-    exit $?
-
-fi
-
+EXIT=$?
 
 echo
-echo "Installer engine not found in expected location."
-echo
-echo "Available installation files:"
-
-find "$BASE/System/Installation" \
--maxdepth 3 \
--type f \
-2>/dev/null
-
-echo
-echo "STOP."
+echo "Installer exited:"
+echo "$EXIT"
